@@ -1,14 +1,16 @@
 import numpy as np
-from auxiliar_functions.trajectory_plot import run_robot_animation
+from auxiliar_functions.plot_robot import animate_trajectory
 
-# Example data to run the animation (replace with actual robot data)
-x = np.linspace(0, 10, 101)
-y = np.sin(x)
-theta = np.linspace(0, 2*np.pi, 101)
-t = np.linspace(0, 10, 100)
-dt = 0.1
+# Example usage
+# Create a sample trajectory (3 DOF: x, y, theta) with 100 time steps
+N = 1000
+trajectory = np.zeros((3, N))
+trajectory[0, :] = np.linspace(0, 2, N)  # x positions
+trajectory[1, :] = np.linspace(0, 2, N)  # y positions
+trajectory[2, :] = np.linspace(0, np.pi, N)  # theta (orientation)
 
-print (x)
+# Time step for each frame
+dt = 0.01  # seconds
 
-# Call the function to run the animation
-run_robot_animation(x, y, theta, t, dt)
+# Animate the trajectory
+animate_trajectory(trajectory, L=0.3, l=0.25, dt=dt)
