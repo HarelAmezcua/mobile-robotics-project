@@ -7,7 +7,7 @@ const char* password = "66,Fh172";
 
 // UDP communication setup
 WiFiUDP udp;
-const char* pc_ip = "192.168.1.38"; // PC IP address
+const char* pc_ip = "192.168.1.35"; // PC IP address
 const int udp_port_receive = 12345;
 const int udp_port_send = 12346;
 
