@@ -2,6 +2,12 @@ import cv2
 import apriltag
 import numpy as np
 
+# Camera calibration parameters (replace with actual calibration data)
+fx = 490.346934509346
+cx = 329.879215710305
+fy = 491.640993779275
+cy = 227.768486995022
+
 # Camera calibration parameters
 # These should be determined through calibration for your specific camera
 camera_matrix = np.array([[fx, 0, cx],

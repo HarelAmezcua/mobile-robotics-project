@@ -19,26 +19,39 @@ wheel_speed_plot = np.zeros((4, N))
 q_desired_plot = np.zeros((3, N))
 qp_desired_plot = np.zeros((3, N))
 
+# Polar rose parameters
+R = 5  # Radius coefficient
+k = 10  # Number of petals (integer values produce closed roses)
 
-# Trajectory generation
-a = 0.1
-b = 2
-c = 0.1
 
 def q_deseada(t):
-    return np.array([a * t, b * np.sin(c * t), 0])
+    theta = 0.1 * t
+    r = R * np.sin(k * theta)
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+    return np.array([x, y, 0])  # theta_desired = 0
+
 
 def qp_deseada(t):
-    return np.array([a, b * c * np.cos(c * t), 0])
+    theta = 0.1 * t
+    r = R * np.sin(k * theta)
+    dr_dt = R * k * np.cos(k * theta) * 0.1
+    dx_dt = dr_dt * np.cos(theta) - r * np.sin(theta) * 0.1
+    dy_dt = dr_dt * np.sin(theta) + r * np.cos(theta) * 0.1
+    return np.array([dx_dt, dy_dt, 0])
+
 
 # Define the robotMovement function before using it
 def robot_movement(theta, v):
     alpha = theta + np.pi / 4
     return (1 / 4) * np.array([
-        [np.sqrt(2) * np.sin(alpha), np.sqrt(2) * np.cos(alpha), np.sqrt(2) * np.cos(alpha), np.sqrt(2) * np.sin(alpha)],
-        [-np.sqrt(2) * np.cos(alpha), np.sqrt(2) * np.sin(alpha), np.sqrt(2) * np.sin(alpha), -np.sqrt(2) * np.cos(alpha)],
+        [np.sqrt(2) * np.sin(alpha), np.sqrt(2) * np.cos(alpha), np.sqrt(2) * np.cos(alpha),
+         np.sqrt(2) * np.sin(alpha)],
+        [-np.sqrt(2) * np.cos(alpha), np.sqrt(2) * np.sin(alpha), np.sqrt(2) * np.sin(alpha),
+         -np.sqrt(2) * np.cos(alpha)],
         [-1 / (L + l), 1 / (L + l), -1 / (L + l), 1 / (L + l)]
     ]) @ v
+
 
 # Initial condition
 q = np.array([-5, 5, np.pi / 4])
@@ -55,7 +68,7 @@ i = 1
 for t in np.arange(dt, S, dt):
     q_desired_plot[:, i] = q_deseada(t)
     qp_desired_plot[:, i] = qp_deseada(t)
-    
+
     # Controller (First part - [u_x, u_y, u_theta])
     q_actual = q
     u = qp_deseada(t) + gain_matrix @ (q_deseada(t) - q_actual)
@@ -80,7 +93,6 @@ for t in np.arange(dt, S, dt):
     i += 1
 
 
-
 def plotting_xy(q_plot, q_desired):
     plt.figure()
     plt.plot(q_plot[0, :], q_plot[1, :], 'b', linewidth=2)
@@ -92,7 +104,7 @@ def plotting_xy(q_plot, q_desired):
     plt.grid()
     plt.axis('equal')
     plt.legend(["Real", "Deseada"])
-    
+
 
 def plot_desired_vs_actual(t_plot, q_plot, q_desired_array):
     plt.figure()
@@ -121,7 +133,8 @@ def plot_desired_vs_actual(t_plot, q_plot, q_desired_array):
     plt.xlabel("Tiempo [s]")
     plt.title("Desplazamiento en theta")
     plt.legend(["θ real", "θ deseada"])
-    plt.grid()        
+    plt.grid()
+
 
 def plot_control_action(t_plot, control_plot):
     plt.figure()
@@ -144,7 +157,8 @@ def plot_control_action(t_plot, control_plot):
     plt.title("Acción de control en $\dot{θ}$", fontsize=10)
     plt.ylabel("m/s")
     plt.xlabel("Tiempo [s]")
-    plt.grid()    
+    plt.grid()
+
 
 def plot_wheel_speeds(t_plot, v):
     plt.figure()
@@ -174,7 +188,8 @@ def plot_wheel_speeds(t_plot, v):
     plt.title("Velocidad de rueda 4")
     plt.ylabel("m/s")
     plt.xlabel("Tiempo [s]")
-    plt.grid()    
+    plt.grid()
+
 
 # Call plotting functions
 plotting_xy(q_plot, q_desired_plot)
