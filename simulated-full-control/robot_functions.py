@@ -1,20 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def q_deseada(t):
-    R = 5  # Radius coefficient
-    k = 10  # Number of petals (integer values produce closed roses)
+    R = 0.5  # Radius coefficient
+    k = 5  # Non-integer value for an open rose pattern
 
     theta = 0.1 * t
     r = R * np.sin(k * theta)
     x = r * np.cos(theta)
     y = r * np.sin(theta)
-    return np.array([x, y, 0])  # theta_desired = 0
+    return np.array([x, y, 0])
 
 
 def qp_deseada(t):
-    R = 5  # Radius coefficient
-    k = 10  # Number of petals (integer values produce closed roses)
+    R = 0.5  # Radius coefficient
+    k = 5  # Non-integer value consistent with q_deseada
 
     theta = 0.1 * t
     r = R * np.sin(k * theta)
@@ -131,13 +132,3 @@ def plot_wheel_speeds(t_plot, v):
     plt.ylabel("m/s")
     plt.xlabel("Tiempo [s]")
     plt.grid()
-
-
-# Call plotting functions
-plotting_xy(q_plot, q_desired_plot)
-plot_desired_vs_actual(t_plot, q_plot, q_desired_plot)
-plot_control_action(t_plot, control_plot)
-plot_wheel_speeds(t_plot, wheel_speed_plot)
-
-# Add plt.show() at the end of the script
-plt.show()

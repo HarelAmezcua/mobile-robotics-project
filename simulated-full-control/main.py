@@ -1,62 +1,67 @@
 import numpy as np
 import time
-from robot_functions import q_deseada, qp_deseada, robot_movement
+import matplotlib.pyplot as plt
+from robot_functions import (
+    q_deseada, qp_deseada, robot_movement, plotting_xy,
+    plot_wheel_speeds, plot_control_action, plot_desired_vs_actual
+)
+from initialize_simulation import initialize_parameters, initialize_states, plot_results
 
+# Initialize parameters and states
+L, l, dt, Tf, N, gain_matrix = initialize_parameters()
+q, qp, q_plot, qp_plot, control_plot, wheel_speed_plot, q_desired_plot, qp_desired_plot, t_plot, dt_plot = initialize_states(N)
 
-# Robot parameters
-L = 0.25
-l = 0.20
+# Simulation loop with precise timing for 100Hz execution
+start_time = time.perf_counter()
+last_control_time = start_time
+i = 0
 
-# Simulation parameters
-dt = 0.01
-S = 30
-N = int(S / dt)
+while time.perf_counter() - start_time <= Tf:
+    current_time = time.perf_counter()
 
-# Pre-allocate storage matrices
-q_plot = np.zeros((3, N))
-qp_plot = np.zeros((3, N))
-t_plot = np.arange(0, N) * dt  # Fixed the size of tPlot
-control_plot = np.zeros((3, N))
-wheel_speed_plot = np.zeros((4, N))
-q_desired_plot = np.zeros((3, N))
-qp_desired_plot = np.zeros((3, N))
+    # Check if it's time to run the control logic
+    if current_time - last_control_time >= dt:
+        loop_start_time = time.perf_counter()
 
+        # Desired states
+        q_desired_plot[:, i] = q_deseada(current_time - start_time)
+        qp_desired_plot[:, i] = qp_deseada(current_time - start_time)
 
-# Initial condition
-q = np.array([-5, 5, np.pi / 4])
-qp = np.zeros(3)
-q_plot[:, 0] = q
-qp_plot[:, 0] = qp
+        # Controller (First part - [u_x, u_y, u_theta])
+        q_actual = q
+        u = qp_desired_plot[:, i] + gain_matrix @ (q_desired_plot[:, i] - q_actual)
 
-# Gains
-k_x, k_y, k_theta = 1, 1, 1
-gain_matrix = np.diag([k_x, k_y, k_theta])
+        # Convert to wheel speeds
+        alpha = q_actual[2] + np.pi / 4
+        v = np.array([
+            [np.sqrt(2) * np.sin(alpha), -np.sqrt(2) * np.cos(alpha), -(L + l)],
+            [np.sqrt(2) * np.cos(alpha), np.sqrt(2) * np.sin(alpha), (L + l)],
+            [np.sqrt(2) * np.cos(alpha), np.sqrt(2) * np.sin(alpha), -(L + l)],
+            [np.sqrt(2) * np.sin(alpha), -np.sqrt(2) * np.cos(alpha), (L + l)]
+        ]) @ u
 
-# Simulation
-i = 1
-for t in np.arange(dt, S, dt):
-    q_desired_plot[:, i] = q_deseada(t)
-    qp_desired_plot[:, i] = qp_deseada(t)
+        # Update robot state
+        qp = robot_movement(q_actual[2], v, L, l)
+        q = q + qp * dt  # use fixed dt
 
-    # Controller (First part - [u_x, u_y, u_theta])
-    q_actual = q
-    u = qp_deseada(t) + gain_matrix @ (q_deseada(t) - q_actual)
+        # Store values for plotting
+        q_plot[:, i] = q
+        qp_plot[:, i] = qp
+        control_plot[:, i] = u
+        wheel_speed_plot[:, i] = v
+        t_plot[i] = current_time - start_time
 
-    # Convert to wheel speeds
-    alpha = q_actual[2] + np.pi / 4
-    v = np.array([
-        [np.sqrt(2) * np.sin(alpha), -np.sqrt(2) * np.cos(alpha), -(L + l)],
-        [np.sqrt(2) * np.cos(alpha), np.sqrt(2) * np.sin(alpha), (L + l)],
-        [np.sqrt(2) * np.cos(alpha), np.sqrt(2) * np.sin(alpha), -(L + l)],
-        [np.sqrt(2) * np.sin(alpha), -np.sqrt(2) * np.cos(alpha), (L + l)]
-    ]) @ u
+        # Record the actual time step
+        current_loop_time = time.perf_counter()
+        dt_plot[i] = current_loop_time - last_control_time
+        last_control_time = current_loop_time
 
-    qp = robot_movement(q_actual[2], v)
-    q = q + qp * dt
+        i += 1
 
-    q_plot[:, i] = q
-    qp_plot[:, i] = qp
-    control_plot[:, i] = u
-    wheel_speed_plot[:, i] = v
+# Trim arrays
+q_plot, qp_plot, control_plot, wheel_speed_plot = q_plot[:, :i], qp_plot[:, :i], control_plot[:, :i], wheel_speed_plot[:, :i]
+q_desired_plot, qp_desired_plot, t_plot, dt_plot = q_desired_plot[:, :i], qp_desired_plot[:, :i], t_plot[:i], dt_plot[:i]
+dt_plot[0] = 0
 
-    i += 1
+# Plot results
+plot_results(q_plot, q_desired_plot, t_plot, control_plot, wheel_speed_plot, dt_plot)
