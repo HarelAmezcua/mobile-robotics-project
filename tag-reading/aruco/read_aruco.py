@@ -3,25 +3,25 @@ import numpy as np
 import time
 
 # Camera calibration parameters (replace with actual calibration data)
-fx = 490.346934509346
-cx = 329.879215710305
-fy = 491.640993779275
-cy = 227.768486995022
+fx = 808.699859964307
+cx = 322.814181940711
+fy = 809.589244472111
+cy = 245.745667049578
 
 camera_matrix = np.array([[fx, 0, cx],
                           [0, fy, cy],
                           [0, 0, 1]], dtype="double")
-dist_coeffs = np.zeros((4, 1))  # Use actual distortion coefficients if available
+dist_coeffs = np.array([-0.0360992756163317,-0.185105812278993,0,0])  # Use actual distortion coefficients if available
 
 # Define the ArUco marker dictionary and parameters
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 aruco_params = cv2.aruco.DetectorParameters()
 
 # Specify the actual marker length in meters (e.g., 0.1 m for a 10 cm marker)
-marker_length = 0.1
+marker_length = 0.095
 
 # Open the camera (0 is usually the default camera)
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 # Initialize time for the first loop and global frame
 prev_time = time.time()

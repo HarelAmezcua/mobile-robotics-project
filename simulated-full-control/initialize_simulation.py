@@ -7,7 +7,7 @@ def initialize_parameters():
     dt = 0.01
     Tf = 100
     N = int(Tf / dt)
-    gain_matrix = np.diag([2, 2, 1])  # [k_x, k_y, k_theta]
+    gain_matrix = np.diag([10,10, 10])  # [k_x, k_y, k_theta]
     return L, l, dt, Tf, N, gain_matrix
 
 
@@ -15,7 +15,7 @@ def initialize_parameters():
 import numpy as np
 
 def initialize_states(N):
-    q = np.array([-0.1, 0.1, 0])
+    q = np.array([0, 0, 0])
     qp = np.zeros(3)
     q_plot = np.zeros((3, N))
     qp_plot = np.zeros((3, N))

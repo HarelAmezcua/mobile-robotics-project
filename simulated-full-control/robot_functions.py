@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 
 def q_deseada(t):
-    R = 0.5  # Radius coefficient
-    k = 5  # Non-integer value for an open rose pattern
+    R = 1  # Radius coefficient
+    k = 3  # Non-integer value for an open rose pattern
 
     theta = 0.1 * t
     r = R * np.sin(k * theta)
@@ -14,8 +14,8 @@ def q_deseada(t):
 
 
 def qp_deseada(t):
-    R = 0.5  # Radius coefficient
-    k = 5  # Non-integer value consistent with q_deseada
+    R = 1  # Radius coefficient
+    k = 3  # Non-integer value consistent with q_deseada
 
     theta = 0.1 * t
     r = R * np.sin(k * theta)

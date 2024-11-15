@@ -1,10 +1,9 @@
-# shared_data.py
-import queue
-import numpy as np
 
-pose_queue = queue.Queue(maxsize=1)
-odometry_queue = queue.Queue(maxsize=1)
-control_command_queue = queue.Queue(maxsize=1)
+"""import multiprocessing as mp
 
-current_pose = np.array([0.0, 0.0, 0.0])  # x, y, theta
-current_velocity = np.array([0.0, 0.0])  # v, omega
+# Define queue size (adjust as needed)
+QUEUE_SIZE = 10
+
+# Initialize shared queues for visual and odometry data
+pose_queue = mp.Queue(QUEUE_SIZE)
+odometry_queue = mp.Queue(QUEUE_SIZE)"""
