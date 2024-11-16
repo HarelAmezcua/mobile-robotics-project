@@ -40,33 +40,6 @@ def get_latest(q):
             break
     return latest
 
-def plot_trajectories(real_trajectory, visual_trajectory, odometry_trajectory, t_plot, i):
-    """
-    Plot real, visual, and odometry trajectories on the same graph.
-
-    Parameters:
-        real_trajectory: np.array - Array of real robot poses (3xN).
-        visual_trajectory: np.array - Array of visual perception poses (3xN).
-        odometry_trajectory: np.array - Array of odometry poses (3xN).
-        t_plot: np.array - Time vector corresponding to the trajectories.
-    """
-    plt.figure(figsize=(10, 6))
-
-    # Plot trajectories
-    plt.plot(real_trajectory[0, :], real_trajectory[1, :], label='Real Trajectory', linestyle='-', linewidth=2)
-    plt.plot(visual_trajectory[0, :], visual_trajectory[1, :], label='Visual Trajectory', linestyle='--', linewidth=1.5)
-    plt.plot(odometry_trajectory[0, :], odometry_trajectory[1, :], label='Odometry Trajectory', linestyle=':',
-             linewidth=1.5)
-
-    # Add labels, title, and legend
-    plt.xlabel('X Position (m)')
-    plt.ylabel('Y Position (m)')
-    plt.title('Comparison of Real, Visual, and Odometry Trajectories')
-    plt.legend()
-    plt.grid(True)
-    plt.axis('equal')  # Ensure the aspect ratio is equal for better visualization
-    plt.show()
-
 def main():
     # Create a Manager to handle shared queues
     manager = mp.Manager()
@@ -100,12 +73,6 @@ def main():
     real_trajectory = np.zeros((3, N))
     visual_trajectory = np.zeros((3, N))
     odometry_trajectory = np.zeros((3, N))
-
-    # Initialize integral error accumulator
-    integral_error = np.zeros(3)  # Assuming 3 states: x, y, theta
-    # Define integral gain matrix (K_i)
-    # You may need to tune these gains based on your system
-    K_i = np.array([0.01, 0.01, 0.01])  # Example values
 
     start_time = time.perf_counter()
     last_control_time = start_time
