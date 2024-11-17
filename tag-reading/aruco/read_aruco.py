@@ -21,7 +21,7 @@ aruco_params = cv2.aruco.DetectorParameters()
 marker_length = 0.095
 
 # Open the camera (0 is usually the default camera)
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 # Initialize time for the first loop and global frame
 prev_time = time.time()

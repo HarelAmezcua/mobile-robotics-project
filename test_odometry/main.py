@@ -5,10 +5,9 @@ import numpy as np
 import time
 import queue  # To handle queue.Empty exception
 from robot_functions import (
-    q_deseada, qp_deseada, robot_movement, plotting_xy,
-    plot_wheel_speeds, plot_control_action, plot_desired_vs_actual
+    plotting_visual_vs_odometry, plot_against_time, plot_dt
 )
-from initialize_simulation import initialize_parameters, initialize_states, plot_results
+from initialize_odometry_test_parameters import initialize_parameters, initialize_states
 from threads_functions import visual_perception_loop, odometry_loop
 
 # Initialize shared pose array (size 3 for x, y, theta)
@@ -22,7 +21,9 @@ current_pose_shared[2] = 0
 previous_pose_queue = np.array([0, 0, 0])
 previous_odometry_queue = np.array([0, 0, 0])
 
-def sensor_fusion(visual_pose, odometry_pose, visual_weight=2, odometry_weight=0.5):
+"""Functions"""
+
+def sensor_fusion(visual_pose, odometry_pose, visual_weight=2, odometry_weight=0):
     """Perform a weighted average for sensor fusion."""
     return (visual_weight * np.array(visual_pose) + odometry_weight * np.array(odometry_pose))/(visual_weight+odometry_weight)
 
@@ -40,7 +41,9 @@ def get_latest(q):
             break
     return latest
 
+
 def main():
+
     # Create a Manager to handle shared queues
     manager = mp.Manager()
     pose_queue = manager.Queue(maxsize=100)       # Define appropriate maxsize
@@ -56,7 +59,7 @@ def main():
         process.start()
 
     # Add a short delay to allow the processes to start and populate the queues
-    time.sleep(1)  # Adjust if necessary to ensure processes are running
+    time.sleep(5)  # Adjust if necessary to ensure processes are running
 
     # Check if the queues have initial data
     while pose_queue.empty() or odometry_queue.empty():
@@ -67,12 +70,7 @@ def main():
 
     # Initialize parameters and states
     L, l, dt, Tf, N, gain_matrix = initialize_parameters()
-    q, qp, q_plot, qp_plot, control_plot, wheel_speed_plot, q_desired_plot, qp_desired_plot, t_plot, dt_plot = initialize_states(N)
-
-    # Trajectory logs for real, visual, and odometry poses
-    real_trajectory = np.zeros((3, N))
-    visual_trajectory = np.zeros((3, N))
-    odometry_trajectory = np.zeros((3, N))
+    visual_pose, odometry_pose,visual_pose_plot,odometry_pose_plot, t_plot, dt_plot = initialize_states(N)
 
     start_time = time.perf_counter()
     last_control_time = start_time
@@ -88,92 +86,33 @@ def main():
 
         # Check if it's time to run the control logic
         if current_time - last_control_time >= dt:
-            # Retrieve the current real pose from shared memory
-            real_pose = np.array([current_pose_shared[0], current_pose_shared[1], current_pose_shared[2]])
-
             # Retrieve the latest visual and odometry poses from the queues
             visual_pose = get_latest(pose_queue)
 
             if visual_pose is None:
                 visual_pose = previous_pose_queue
                 print("Using previous Pose as visual_pose fallback.")
-            else:
-                #print("Retrieved latest visual_pose from queue:", visual_pose)
+            else:                
                 previous_pose_queue = visual_pose
 
             odometry_pose = get_latest(odometry_queue)
+
             if odometry_pose is None:
                 odometry_pose = previous_odometry_queue
                 print("Using Previous Pose as odometry_pose fallback.")
-            else:
-                #print("Retrieved latest odometry_pose from queue:", odometry_pose)
+            else:                
                 previous_odometry_queue = odometry_pose
 
-            # Log each pose for plotting
-            real_trajectory[:, i] = real_pose
-            visual_trajectory[:, i] = visual_pose
-            odometry_trajectory[:, i] = odometry_pose
+            # Log each pose for plotting            
+            visual_pose_plot[:, i] = visual_pose
+            odometry_pose_plot[:, i] = odometry_pose
 
             # Sensor Fusion (balanced weighted average)
             fused_pose = sensor_fusion(visual_pose, odometry_pose)
 
             # Apply Low-Pass Filter to Fused Pose
             fused_pose = low_pass_filter(fused_pose, previous_fused_pose, alpha=0.1)
-            previous_fused_pose = fused_pose
-
-            # Desired states
-            q_desired_plot[:, i] = q_deseada(current_time - start_time)
-            qp_desired_plot[:, i] = qp_deseada(current_time - start_time)
-
-            # Compute error
-            error = q_desired_plot[:, i] - fused_pose
-
-            # Update integral of error
-            integral_error += error * dt
-            integral_error = np.clip(integral_error, -0.1, 0.1)
-
-            # Controller logic with integral action
-            # Assuming gain_matrix is the proportional gain (K_p)
-            # u = K_p * error + K_i * integral_error + qp_desired
-            u = qp_desired_plot[:, i] + gain_matrix @ error + K_i * integral_error
-
-            # Convert control action to wheel speeds
-            alpha_angle = fused_pose[2] + np.pi / 4
-            v = np.array([
-                [np.sqrt(2) * np.sin(alpha_angle), -np.sqrt(2) * np.cos(alpha_angle), -(L + l)],
-                [np.sqrt(2) * np.cos(alpha_angle), np.sqrt(2) * np.sin(alpha_angle), (L + l)],
-                [np.sqrt(2) * np.cos(alpha_angle), np.sqrt(2) * np.sin(alpha_angle), -(L + l)],
-                [np.sqrt(2) * np.sin(alpha_angle), -np.sqrt(2) * np.cos(alpha_angle), (L + l)]
-            ]) @ u
-
-            # Apply low-pass filter to wheel speeds
-            v = low_pass_filter(v, previous_v, alpha=0.05)
-            previous_v = v
-
-            # Adding sinusoidal disturbance as before
-            v[0] = v[0] + 0.05 * np.sin(1 * (current_time - start_time))
-            v[1] = v[1] + 0.05 * np.sin(1 * (current_time - start_time)+1)
-            v[2] = v[2] + 0.05 * np.sin(1 * (current_time - start_time)+2)
-            v[3] = v[3] + 0.05 * np.sin(1 * (current_time - start_time)+3)
-
-            # Update robot state
-            qp = robot_movement(fused_pose[2], v, L, l)
-            q = q + qp * dt
-
-            noise = np.random.normal(0, 0.001, 3)  # Adjust noise as needed
-            q = q + noise
-
-            # Update the shared real pose after computing new q
-            current_pose_shared[0] = q[0]
-            current_pose_shared[1] = q[1]
-            current_pose_shared[2] = q[2]
-
-            # Store values for plotting
-            q_plot[:, i] = q
-            qp_plot[:, i] = qp
-            control_plot[:, i] = u
-            wheel_speed_plot[:, i] = v
-            t_plot[i] = current_time - start_time
+            previous_fused_pose = fused_pose                                        
 
             # Record the actual time step
             current_loop_time = time.perf_counter()
@@ -181,7 +120,7 @@ def main():
             last_control_time = current_loop_time
 
             # Print the current robot pose for debugging
-            print(f"Iteration {i}: Real Pose: {q}, Fused Pose: {fused_pose}, Error: {error}, Integral Error: {integral_error}")
+            print(f"Iteration {i}: Visual Pose: {visual_pose}, Odometry Pose: {odometry_pose}")
 
             i += 1
 
@@ -191,14 +130,13 @@ def main():
         process.join()
 
     # Trim arrays
-    q_plot, qp_plot, control_plot, wheel_speed_plot = q_plot[:, :i], qp_plot[:, :i], control_plot[:, :i], wheel_speed_plot[:, :i]
-    q_desired_plot, qp_desired_plot, t_plot, dt_plot = q_desired_plot[:, :i], qp_desired_plot[:, :i], t_plot[:i], dt_plot[:i]
+    visual_pose_plot, odometry_pose_plot = visual_pose_plot[:, :i], odometry_pose_plot[:, :i]
+    t_plot, dt_plot = t_plot[:i], dt_plot[:i]
     dt_plot[0] = 0
-    # Trim arrays and plot results as in previous examples
-    plot_results(q_plot, q_desired_plot, t_plot, control_plot, wheel_speed_plot, dt_plot)
 
-    # After trimming arrays
-    plot_trajectories(real_trajectory[:, :i], visual_trajectory[:, :i], odometry_trajectory[:, :i], t_plot, i)
+    plotting_visual_vs_odometry(visual_pose_plot, odometry_pose_plot)
+    plot_against_time(t_plot, visual_pose_plot, odometry_pose_plot)
+    plot_dt(dt_plot,t_plot)
 
 if __name__ == '__main__':
     main()
