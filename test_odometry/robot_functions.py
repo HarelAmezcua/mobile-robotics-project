@@ -11,6 +11,8 @@ def plotting_visual_vs_odometry(visual_pose_plot, odometry_pose_plot):
     plt.title('Trayectoria del robot')
     plt.grid()
     plt.axis('equal')
+    plt.xlim([-1, 1])  # Set x-axis limits
+    plt.ylim([-1, 1])  # Set y-axis limits
     plt.legend(["Visual Pose", "Odometry Pose"])
 
 
@@ -23,6 +25,7 @@ def plot_against_time(t_plot, visual_pose_plot, odometry_pose_plot):
     plt.xlabel("Tiempo [s]")
     plt.title("Desplazamiento en X")
     plt.legend(["X visual", "X Odometry"])
+    plt.ylim([-0.3, 0.3])  # Set y-axis limits
     plt.grid()
 
     plt.subplot(3, 1, 2)
@@ -32,6 +35,7 @@ def plot_against_time(t_plot, visual_pose_plot, odometry_pose_plot):
     plt.xlabel("Tiempo [s]")
     plt.title("Desplazamiento en Y")
     plt.legend(["Y visual", "Y Odometry"])
+    plt.ylim([-0.3, 0.3])  # Set y-axis limits
     plt.grid()
 
     plt.subplot(3, 1, 3)
@@ -41,6 +45,7 @@ def plot_against_time(t_plot, visual_pose_plot, odometry_pose_plot):
     plt.xlabel("Tiempo [s]")
     plt.title("Desplazamiento en theta")
     plt.legend(["Theta visual", "Theta Odometry"])
+    plt.ylim([-1, 1])  # Set y-axis limits
     plt.grid()
 
 def plot_dt(dt_plot,t_plot):

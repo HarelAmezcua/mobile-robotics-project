@@ -5,7 +5,7 @@ def initialize_parameters():
     L = 0.25
     l = 0.20
     dt = 0.01
-    Tf = 100
+    Tf = 15
     N = int(Tf / dt)
     gain_matrix = np.diag([10,10, 10])  # [k_x, k_y, k_theta]
     return L, l, dt, Tf, N, gain_matrix
