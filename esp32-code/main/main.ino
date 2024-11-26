@@ -1,123 +1,67 @@
 #include <Arduino.h>
-#include "config.h"
-#include "wifi_module.h"
-#include "udp_module.h"
-#include "odometry.h"
+#include "variables.h"
+#include "wifi_setup.h"
+#include "motor_control.h"
+#include "encoder.h"
 #include "control.h"
 
-// Instantiate modules
-WiFiModule wifi;
-UDPModule udp;
-Odometry odometry;
-Control control;
+// Global variables
+uint32_t lastTime = 0; // Initialize lastTime to 0 outside the loop
 
-// Wheel speed variables
-float wheel_speeds[NUM_WHEELS] = {0.0, 0.0, 0.0, 0.0};
-
-// Position and velocity variables
-float position_x = 0.0;
-float position_y = 0.0;
-float local_velocity_v = 0.0;
-float local_velocity_omega = 0.0;
-
-// Timing
-unsigned long previousMillis = 0;
-const unsigned long loopInterval = 1; // 10ms for 100Hz
-
-// LED status (optional)
-void setupLED() {
-    pinMode(STATUS_LED_PIN, OUTPUT);
-    digitalWrite(STATUS_LED_PIN, LOW);
-}
-
-void indicateConnectionStatus(bool connected) {
-    digitalWrite(STATUS_LED_PIN, connected ? HIGH : LOW);
-}
 
 void setup() {
-    // Initialize serial communication
     Serial.begin(115200);
-    delay(1000); // Allow time for serial monitor to initialize
 
-    // Initialize LED (optional)
-    setupLED();
-
-    // Initialize Wi-Fi
-    wifi.begin();
-    indicateConnectionStatus(true);
+    // Set up Wi-Fi
+    setupWiFi();
 
     // Start UDP
-    udp.begin(UDP_PORT_RECEIVE);
+    udp.begin(udp_port_receive);
 
-    // Initialize Control
-    control.stop();
+    // Set up motor pins
+    pinMode(motor1_pin1, OUTPUT); pinMode(motor1_pin2, OUTPUT); pinMode(enable1_pin, OUTPUT);
+    pinMode(motor2_pin1, OUTPUT); pinMode(motor2_pin2, OUTPUT); pinMode(enable2_pin, OUTPUT);
+    pinMode(motor3_pin1, OUTPUT); pinMode(motor3_pin2, OUTPUT); pinMode(enable3_pin, OUTPUT);
+    pinMode(motor4_pin1, OUTPUT); pinMode(motor4_pin2, OUTPUT); pinMode(enable4_pin, OUTPUT);
+
+    // Set up encoders
+    setupEncoders();
+
+    startTime = millis();  // Store start time
 }
 
 void loop() {
-    unsigned long currentMillis = millis();
-    if(currentMillis - previousMillis >= loopInterval) {
-        previousMillis = currentMillis;
+    static uint32_t nextWakeTime = 0;    // Track the next wake time in microseconds
+    const uint32_t loopInterval = 1000; // Desired interval in microseconds (1ms)
 
-        // Check for incoming UDP packets
-        char incomingPacket[255];
-        if(udp.parseIncoming(incomingPacket, sizeof(incomingPacket))) {
-            Serial.print("Received: ");
-            Serial.println(incomingPacket);
+    uint32_t currentTime = micros();    // Current time in microseconds
+    uint32_t dt = currentTime - lastTime; // Calculate the time since the last loop
+    lastTime = currentTime;             // Update lastTime for the next iteration
 
-            // Parse the wheel speeds
-            int parsed = sscanf(incomingPacket, "%f,%f,%f,%f", 
-                                &wheel_speeds[0], 
-                                &wheel_speeds[1], 
-                                &wheel_speeds[2], 
-                                &wheel_speeds[3]);
-            if(parsed == NUM_WHEELS) {
-                // Apply control
-                control.applyWheelSpeeds(wheel_speeds);
+    if (nextWakeTime == 0) {
+        nextWakeTime = currentTime + loopInterval; // Initialize on the first run
+    }
 
-                // Optionally, print the wheel speeds
-                Serial.printf("Wheel Speeds: %.2f, %.2f, %.2f, %.2f\n", 
-                              wheel_speeds[0], 
-                              wheel_speeds[1], 
-                              wheel_speeds[2], 
-                              wheel_speeds[3]);
-            }
-            else {
-                Serial.println("Error parsing wheel speeds.");
-            }
-        }
+    // Print the elapsed time (dt)
+    //Serial.print("dt: ");
+    //Serial.print(dt);
+    //Serial.println(" us");
 
-        // Check for connection timeout
-        if(currentMillis - udp.getLastPacketTime() > CONNECTION_TIMEOUT) {
-            Serial.println("Connection lost! Stopping robot.");
-            control.stop();
-            indicateConnectionStatus(false); // Turn off LED
+    // Control loop logic can go here
+    controlLoop(dt); // Pass the measured dt to the control logic
 
-            // Signal computer about connection loss
-            const char* lostConnectionMsg = "Connection lost!";
-            udp.sendMessage(PC_IP, UDP_PORT_SEND, lostConnectionMsg);
-        }
-        else {
-            indicateConnectionStatus(true); // Ensure LED is on
+    // Calculate the time left until the next wake time
+    int32_t timeToSleep = nextWakeTime - micros();
 
-            // Update odometry
-            odometry.update(wheel_speeds, loopInterval);
+    if (timeToSleep > 0) {
+        delayMicroseconds(timeToSleep); // Sleep for the remaining time
+    }
 
-            // Get updated position and velocity
-            position_x = odometry.getX();
-            position_y = odometry.getY();
-            local_velocity_v = odometry.getV();
-            local_velocity_omega = odometry.getOmega();
+    // Update the next wake time for the next iteration
+    nextWakeTime += loopInterval;
 
-            // Prepare the message to send back
-            char outgoingMessage[255];
-            sprintf(outgoingMessage, "%.2f,%.2f,%.2f,%.2f", 
-                    position_x, 
-                    position_y, 
-                    local_velocity_v, 
-                    local_velocity_omega);
-
-            // Send the position and velocity data to the PC
-            udp.sendMessage(PC_IP, UDP_PORT_SEND, outgoingMessage);
-        }
+    // Adjust for large overruns (catch up)
+    if ((int32_t)(micros() - nextWakeTime) > 0) {
+        nextWakeTime = micros() + loopInterval;
     }
 }

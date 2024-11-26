@@ -1,16 +1,9 @@
-// control.h
 #ifndef CONTROL_H
 #define CONTROL_H
 
-#include "config.h" // To access NUM_WHEELS
+#include <Arduino.h> // Include for uint32_t and other Arduino utilities
 
-class Control {
-public:
-    Control();
-    void applyWheelSpeeds(float wheel_speeds[]);
-    void stop();
-private:
-    void setMotorSpeed(int wheel, float speed);
-};
+void controlLoop(uint32_t dt);
+void receiveUdpPacket();
 
-#endif // CONTROL_H
+#endif
