@@ -4,11 +4,32 @@
 #include <Arduino.h>
 #include <WiFiUDP.h>
 
+// Integral state variables
+float integralX = 0.0f;
+float integralY = 0.0f;
+float integralO = 0.0f;
+
+// Integral gain
+const float kix = 0.01f; // Adjust as needed
+const float kiy = 0.01f; // Adjust as needed
+const float kio = 0.01f; // Adjust as needed
+
 void controlLoop(uint32_t dt) {
-  if (isInfoFirstReceived){
-    float ux = kx * (desiredPosition[0] - position[0]);
-    float uy = ky * (desiredPosition[1] - position[1]);
-    float uo = ko * (desiredPosition[2] - position[2]);
+  if (isInfoFirstReceived) {
+    // Compute errors
+    float errorX = desiredPosition[0] - position[0];
+    float errorY = desiredPosition[1] - position[1];
+    float errorO = desiredPosition[2] - position[2];
+
+    // Update integral terms (considering the time step dt)
+    integralX += errorX * (1 / 1000.0f); // dt is in milliseconds
+    integralY += errorY * (1 / 1000.0f);
+    integralO += errorO * (1 / 1000.0f);
+
+    // Compute control actions with integral terms
+    float ux = kx * errorX + kix * integralX;
+    float uy = ky * errorY + kiy * integralY;
+    float uo = ko * errorO + kio * integralO;
 
     float alpha = theta + PI / 4;
     // Control Action
@@ -21,15 +42,16 @@ void controlLoop(uint32_t dt) {
     motor_control(motor2_pin1, motor2_pin2, enable2_pin, v2);
     motor_control(motor3_pin1, motor3_pin2, enable3_pin, v3);
     motor_control(motor4_pin1, motor4_pin2, enable4_pin, v4);
-            // Print the parsed positions
-        Serial.printf("Position: %f, %f, %f\n", position[0], position[1], position[2]);
-    }else {
-      motor_control(motor1_pin1, motor1_pin2, enable1_pin, 0);
-      motor_control(motor2_pin1, motor2_pin2, enable2_pin, 0);
-      motor_control(motor3_pin1, motor3_pin2, enable3_pin, 0);
-      motor_control(motor4_pin1, motor4_pin2, enable4_pin, 0);
-    }
-    receiveUdpPacket();
+
+    // Print the parsed positions
+    Serial.printf("Position: %f, %f, %f\n", position[0], position[1], position[2]);
+  } else {
+    motor_control(motor1_pin1, motor1_pin2, enable1_pin, 0);
+    motor_control(motor2_pin1, motor2_pin2, enable2_pin, 0);
+    motor_control(motor3_pin1, motor3_pin2, enable3_pin, 0);
+    motor_control(motor4_pin1, motor4_pin2, enable4_pin, 0);
+  }
+  receiveUdpPacket();
 }
 
 

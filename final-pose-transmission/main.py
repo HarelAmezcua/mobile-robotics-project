@@ -21,7 +21,7 @@ def main():
     send_socket, UDP_IP, UDP_PORT_SEND = initialize_streaming()
 
     manager,visual_pose_queue, visual_ready,processes = initialize_queues_processes()
-    wait_for_data(visual_ready,visual_pose_queue)
+    #wait_for_data(visual_ready,visual_pose_queue)
 
 
     # Initialize parameters and states
@@ -40,14 +40,14 @@ def main():
             if current_time - last_control_time >= dt:
 
                 # Check if systems are still operational
-                if not check_system_status(visual_ready):
-                    break
+                #if not check_system_status(visual_ready):
+                    #break
                 
                 # Retrieve actual pose
-                visual_pose, previous_visual_pose = retrieve_pose(visual_pose_queue, previous_visual_pose, "visual_pose")                
+                #visual_pose, previous_visual_pose = retrieve_pose(visual_pose_queue, previous_visual_pose, "visual_pose")                
   
-                visual_pose = low_pass_filter(visual_pose, previous_visual_pose, alpha=0.05) # Apply Low-Pass Filter to Fused Pose
-                previous_visual_pose = visual_pose
+                #visual_pose = low_pass_filter(visual_pose, previous_visual_pose, alpha=0.05) # Apply Low-Pass Filter to Fused Pose
+                #previous_visual_pose = visual_pose
 
                 visual_pose = visual_pose + np.array([0.01,0.01,0.01])
 
