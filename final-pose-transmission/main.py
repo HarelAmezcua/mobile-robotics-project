@@ -11,6 +11,7 @@ from robot_functions import (
 from initialize_odometry_test_parameters import (initialize_parameters, initialize_states)
 from aux_functions import (sensor_fusion, low_pass_filter, initialize_queues_processes,wait_for_data, check_system_status, retrieve_pose, loggin_stuff, initialize_streaming)
 
+#Hola
 
 def main():
     # Set previous pose when queue is empty
@@ -40,7 +41,7 @@ def main():
 
                 # Check if systems are still operational
                 if not check_system_status(visual_ready):
-                    #break
+                    break
                 
                 # Retrieve actual pose
                 visual_pose, previous_visual_pose = retrieve_pose(visual_pose_queue, previous_visual_pose, "visual_pose")                
